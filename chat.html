@@ -3,47 +3,53 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
 	<script type="text/javascript" src="jquery.gracefulWebSocket.js"></script>
 	<script>
-	var chatter = $.gracefulWebSocket("ws://" + document.location.host + "/ws");
+	var init = function () {
+		var chatter = $.gracefulWebSocket("ws://" + document.location.host.split(':')[0]+':8080');
 
-	chatter.onopen = function (evt) {
-		chatter.send(JSON.stringify({'cmd': 'getList'}));
-	}
-	var add_message = function (res) {
-		var p = $('#the-chat');
-		var add = $('<div class="chat-message"><span class="nick">&lt;' + res.nick +
-			'&gt;</span> ' + res.message + '</div>');
-		p.prepend(add);
-		if (p.children().length > 15)
-			p.children().last().remove();
-	}
-
-	chatter.onmessage = function (evt) {
-		var res = JSON.parse(evt.data);
-		var p = $('#the-chat');
-		if (!!res.state) {
-			p.empty();
-			for (var index = 0, end=res.state.length; index < end; index++) {
-				add_message(JSON.parse(res.state[index]))
-			}
-		} else {
-			add_message({nick: res.nick, message:res.message})
+		chatter.onopen = function (evt) {
+			chatter.send(JSON.stringify({'cmd': 'init'}));
 		}
-	}
+		var add_message = function (res) {
+			var p = $('#the-chat');
+			var add = $('<div class="chat-message"><span class="nick">&lt;' + res.nick +
+				'&gt;</span> ' + res.message + '</div>');
+			p.prepend(add);
+			if (p.children().length > 15)
+				p.children().last().remove();
+		}
 
-	function push () {
-		chatter.send(JSON.stringify({
-			message: $('#the-message').val(),
-			nick: $('#the-nick').val()
-		}));
-		$('#the-message').val('');
-		$('#the-message').focus();
-	}
+		chatter.onmessage = function (evt) {
+			var res = JSON.parse(evt.data);
+			var p = $('#the-chat');
+			if (!!res.state) {
+				p.empty();
+				for (var index = 0, end=res.state.length; index < end; index++) {
+					add_message(JSON.parse(res.state[index]))
+				}
+			} else if (!!res.nick && res.message !== undefined) {
+				add_message({nick: res.nick, message:res.message})
+			}
+		}
 
-	$(function() {
-		$('#the-button').click(push);
-		$('#the-message').keyup(function (evt) { if (evt.keyCode == 13) push(); });
+		function push () {
+			var message = {
+				message: $('#the-message').val(),
+				nick: $('#the-nick').val()
+			}
+			chatter.send(JSON.stringify(message));
+			$('#the-message').val('');
+			$('#the-message').focus();
+			add_message(message)
+		}
+		$(function() {
+			$('#the-button').click(push);
+			$('#the-message').keyup(function (evt) { if (evt.keyCode == 13) push(); });
+		});
+	};
+
+	$(document).ready(function (){
+		init();
 	});
-
 	</script>
 
 	<style>
@@ -72,7 +78,7 @@
 </head>
 <body>
 
-	<h2>Diesel WebSocket Chat</h2>
+	<h2>Made from Scratch WebSocket Chat</h2>
 
 	<div style="font-size: 13px; font-weight: bold; margin-bottom: 10px">
 		Nick: <input type="text" size="10" id="the-nick" />&nbsp;&nbsp;
